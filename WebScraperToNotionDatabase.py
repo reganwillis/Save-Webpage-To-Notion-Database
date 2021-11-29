@@ -1,13 +1,22 @@
+import sys
 import requests
+import configparser
 from rich import print
 from bs4 import BeautifulSoup
 
 scraped_text = ""
 
-# TODO: integrate config file for convenience
+# read database variables from configuration file
+try:
+    config_file = 'config.txt'
+    config = configparser.ConfigParser()
+    config.read(config_file)
+    auth = config['notionAPI']['INTEGRATION_AUTH']
+    db_id = config['notionAPI']['DATABASE_ID']
+except:
+    sys.exit('Error: unable to read configuration file ' + config_file)
+
 # input (required) - secret key, database key, URL
-auth = ""
-db_id = ""
 url = ""  # TODO: can be string or list of strings
 # input (optional) - name of new database, option to save web-scraped data to local text file
 save_locally = False  # TODO: change default to false
