@@ -30,10 +30,14 @@ except:
     print_formatted('Exiting program', 'progress')
     sys.exit()
 
+def add_block():
+    pass
+
 # user can scrape as many URLs as they want
 while True:
     url = input("Enter URL or type \'EXIT\' to quit: ")
     scraped_text = []
+    new_children = []
 
     # allow user to quit
     if url.upper() == 'EXIT':
@@ -62,10 +66,139 @@ while True:
         # grab title from head
         title = soup.title.string
 
+        # TODO: different method if no article tag available
         # only work with text in article tag
         article = soup.article
-        #print(article.get_text())
-        scraped_text.append(article.get_text())
+        #scraped_text.append(article.get_text())
+
+        # TODO: turn scraped text into dictionary with key as text or link.
+        # TODO: clear out all empty strings from scraped_text
+        # TODO: save in block format
+        one_string = ""
+        block_to_be_added = ""
+        type_of_block_to_be_added = ""
+        subtype_of_block_to_be_added = ""
+        curr_block = {}
+        max_block_length = 2000
+        for tag in article.strings:
+            #print(tag.parent.name)
+            if tag.parent.name == 'h1':
+                new_children.append(curr_block)
+                curr_block = {}
+                #scraped_text.append(one_string)
+                #scraped_text.append(tag)
+                # start new block
+
+                heading = {
+                    "type": "heading_1",
+                    "heading_1": {
+                        "text": [{
+                            "type": "text",
+                            "text": {
+                                "content": tag
+                            }
+                        }]
+                    }
+                }
+                new_children.append(heading)
+            elif tag.parent.name == 'h2':
+                new_children.append(curr_block)
+                curr_block = {}
+                heading = {
+                    "type": "heading_2",
+                    "heading_2": {
+                        "text": [{
+                            "type": "text",
+                            "text": {
+                                "content": tag
+                            }
+                        }]
+                    }
+                }
+                new_children.append(heading)
+            elif tag.parent.name == 'p':
+                #new_children.append(curr_block)
+                #curr_block = {}
+                #type_of_block_to_be_added = "text"
+                #subtype_of_block_to_be_added = "content"
+                if curr_block.get("type") == "paragraph":
+                    # different action if link or not
+                    pass
+                para = {
+                    "type": "paragraph",
+                    "paragraph": {
+                        "text": [{
+                            "type": "text",
+                            "text": {
+                                "content": tag
+                            }
+                        }]
+                    }
+                }
+                if curr_block == {}:
+                    curr_block = para
+                else:
+                    curr_content = curr_block.get("paragraph").get("text")
+                    curr_content.append({"type": "text", "text": {"content": tag}})
+                    curr_block = {
+                        "type": "paragraph",
+                        "paragraph": {
+                            "text": curr_content
+                        }
+                    }
+                #if tag.parent.name == 'span':
+                #    pass
+                #if tag.parent.name == 'em':
+                #    pass
+            elif tag.parent.name == 'a':
+                if curr_block.get("type") == "paragraph":
+                    # different action if link or not
+                    # TODO: user can customize link color
+                    curr_content = curr_block.get("paragraph").get("text")
+                    curr_content.append({"type": "text", "text": {"content": tag, "link": None}, "annotations": {"color": "blue"}})
+                    curr_block = para = {
+                        "type": "paragraph",
+                        "paragraph": {
+                            "text": curr_content
+                        }
+                    }
+                    #curr_content = curr_content + tag
+                
+                # TODO: place text inline
+                # TODO: change color of text
+                # TODO: change text to link
+                #print(tag)
+                #print(tag.parent.get('href'))
+                #scraped_text.append(tag + ' (' + tag.parent.get('href') + ') ')
+            else:
+                #scraped_text.append(tag)
+                # TODO: handle missed text in a better way
+                print_formatted('if statements failed to catch ' + tag.parent.name, 'error')
+                new_children.append(curr_block)
+                curr_block = {}
+    
+                """
+                new_block = {
+                    "paragraph": {
+                        "text": [
+                            {
+                                "text": {
+                                    "content": tag
+                                }
+                                "text": {
+                                    "content": "link text",
+                                    "link": {
+                                        "type": "url",
+                                        "url": ""
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+                children.append(new_block)
+                """
+        #new_children.append(curr_block)
         # TODO: spread text out by tag for readability
         #strs = [text for text in soup.stripped_strings]
         #print(strs)
@@ -74,16 +207,16 @@ while True:
 
         # TODO: medium compatable
         # if https://medium.com/ is in url
+        # split title by pipes (title | by author | publisher)
         
         # extract all links
-        links = []
-        for link in article.find_all('a'):
-            stripped_link = str(link.string) + '\t' + link.get('href')
-            links.append(stripped_link)
-            #print(stripped_link)
-            scraped_text.append(stripped_link)
-        # add them as notion inline links
-        # add separate link section at the bottom
+        # TODO: add them as notion inline links
+        #links = []
+        #for link in article.find_all('a'):
+        #    stripped_link = str(link.string) + '\t' + link.get('href')
+        #    links.append(stripped_link)
+        #    # add separate link section at the bottom
+        #    scraped_text.append(stripped_link)
 
         # extract images
 
@@ -112,11 +245,68 @@ while True:
 
     # save scraped HTML to notion database
     try:
+        print_formatted('Saving to Notion database', 'progress')
         # handle limit by splitting text into multiple blocks
-        #print(len(scraped_text))
+        # TODO: more simple way to format this code block
+        # TODO: cycle through all blocks and split if greater than max length
         max_block_length = 2000 - 1
         blocks = []
+        smaller_new_children = []
 
+        for c in new_children:
+            if c == {}:
+                print('passing')
+            else:
+                smaller_new_children.append(c)
+
+        """
+        for c in new_children:
+            print(c)
+            if c == {}:
+                print('passing')
+                #continue
+                #print(c)
+                #print('new child')
+            elif c.get("type") == "paragraph":
+                # TODO: loop through each curr
+                for curr in c.get("paragraph").get("text")[0].get("text").get("content"):
+                    #curr = c.get("paragraph").get("text")[0].get("text").get("content")
+                    #print(c.get('paragraph').get('text'))
+                    chunks = []
+                    #print(len(curr))
+                    if len(curr) > max_block_length:
+                        print('splitting child')
+                        length_count = 0
+                        new_content = ""
+                        for char in curr:
+                            new_content = new_content + char
+                            length_count = length_count + 1
+                            if length_count == max_block_length:
+                                chunks.append(new_content)
+                                length_count = 0
+                                new_content = ""
+                        chunks.append(new_content)
+                    else:
+                        chunks.append(curr)
+                    for chunk in chunks:
+                        para = {
+                            "type": "paragraph",
+                            "paragraph": {
+                                "text": [{
+                                    "type": "text",
+                                    "text": {
+                                        "content": chunk
+                                    }
+                                }]
+                            }
+                        }
+                        smaller_new_children.append(para)
+                    #else:
+                    #    smaller_new_children.append(c)
+            else:
+                smaller_new_children.append(c)
+        """
+        """
         for item in scraped_text:
             if len(item) > max_block_length:
                 length_count = 0
@@ -128,13 +318,12 @@ while True:
 
                     if length_count == max_block_length:
                         blocks.append(block)
-                        #print(block + '\n')
                         block = ""
                         length_count = 0
                 blocks.append(block)
             else:
                 blocks.append(item)
-
+        """
         children = []
         for block in blocks:
             new_block = {
@@ -166,6 +355,11 @@ while True:
             }
         }
 
+        print_formatted('printing body', 'progress')
+        print(smaller_new_children)
+        #for i in smaller_new_children:
+        #    print(i)
+
         response = requests.post(notion_url,
             headers = {
                 "Content-Type": "application/json",
@@ -177,19 +371,20 @@ while True:
                     "database_id": db_id
                 },
                 "properties": properties,
-                "children": children
+                "children": smaller_new_children
             }
         )
 
         # print response to user
-        #print(response.json())
+        print(response.json())
 
         # get id of new page
         #response_json = response.json()
         #print(response_json)
         #new_page_id = response_json.get("id")
         #print(new_page_id)
-    except:
+    except Exception as e:
+        print(e)
         print_formatted('unable to save to Notion', 'error')
 
 print('[yellow]Thanks for using the Web Scraper to Notion Database App. Goodbye!')
